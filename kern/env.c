@@ -353,11 +353,23 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  What?  (See env_run() and env_pop_tf() below.)
 
 	// LAB 3: Your code here.
-
-	// Now map one page for the program's initial stack
-	// at virtual address USTACKTOP - PGSIZE.
-
-	// LAB 3: Your code here.
+        struct Elf *elf = (struct Elf*)binary;
+        if (elf->e_magic != ELF_MAGIC) {
+                panic("load_icode: not ELF executable.");
+        }
+        struct Proghdr *ph = (struct Proghdr *)(elf->phoff + binary);
+        struct Proghdr *eph = ph + elf->e_phnum;
+        lcr3(PADDR(e->env_pgdir));
+        for (; ph < eph; ph++) {
+                if (ph->p_type == ELF_PROG_LOAD) {
+                         region_alloc(e,  (void *)ph->p_va, ph->p_memsz);
+                         memset((void *)ph->p_va, 0, ph->p_memsz);
+                         memcpy((void *)ph->p_va, binary + ph->p_offset, ph->p_filesz);
+                }
+        }
+        lcr3(PADDR(kern_pgdir));
+        e->env_tf.tf_eip = elf->e_entry;
+        region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
 }
 
 //
@@ -371,6 +383,10 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
+        struct Env *e;
+        env_alloc(&e, 0);
+        load_icode(e, binary);
+        e->env_type = type;
 }
 
 //
@@ -487,7 +503,16 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
+        if (curenv != NULL) {
+                if (curenv->env_status == ENV_RUNNING) {
+                        curenv->env_status = ENV_RUNNABLE;
+                }
+        }
+        curenv = e;
+        curenv->env_status == ENV_RUNNING;
+        curenv->env_runs++;
+        lcr3(PADDR(e->env_pgdir));
+        env_pop_tf(&e->env_tf);
 
-	panic("env_run not yet implemented");
 }
 
