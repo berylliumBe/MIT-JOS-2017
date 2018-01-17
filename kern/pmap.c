@@ -156,6 +156,9 @@ mem_init(void)
         size_t PageInfo_size = sizeof(struct PageInfo);
         pages = (struct PageInfo*)boot_alloc(npages * PageInfo_size);
         memset(pages, 0, npages * PageInfo_size);
+
+        envs = (struct Env*)boot_alloc(NENV*sizeof(struct Env));
+        memset(envs, 0, NENV * sizeof(struct Env));
         
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -204,6 +207,7 @@ mem_init(void)
 	// Your code goes here:
         boot_map_region(kern_pgdir, KERNBASE, (0xffffffff - KERNBASE), 0, PTE_W);
 
+        boot_map_region(kern_pgdir, UENVS, PTSIZE, PADDR(envs), PTE_U);
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
 
